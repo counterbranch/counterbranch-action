@@ -1,0 +1,190 @@
+name: Counterbranch comparison
+description: >-
+  Prepare authenticated runtimes and run an automatic repository comparison or a
+  static Discovery comparison.
+
+inputs:
+  binary:
+    description: Absolute path to a preinstalled, integrity-verified Counterbranch binary.
+    required: false
+    default: ""
+  config:
+    description: Path to an operator-reviewed Counterbranch project configuration.
+    required: false
+    default: ""
+  repository:
+    description: Repository containing the base and head revisions to compare.
+    required: false
+    default: ""
+  base:
+    description: Base Git revision.
+    required: false
+    default: ""
+  head:
+    description: Head Git revision.
+    required: false
+    default: ""
+  select:
+    description: Optional newline-separated repository-relative policy file selectors.
+    required: false
+    default: ""
+  timeout-seconds:
+    description: Maximum time for each CLI invocation.
+    required: false
+    default: "900"
+  engine:
+    description: >-
+      Expected engine of the delivered report: http, opa, cedar, or openfga. Empty
+      accepts any supported engine. Not accepted with discovery.
+    required: false
+    default: ""
+  discovery:
+    description: >-
+      "true" runs a static, advisory Discovery comparison of repository base/head
+      with the signed paired kit instead of a policy engine comparison.
+    required: false
+    default: "false"
+  profile:
+    description: Discovery bounds (default, large or xl); discovery only. Empty uses default.
+    required: false
+    default: ""
+
+outputs:
+  outcome:
+    description: >-
+      CLEAN, VIOLATION, INCOMPLETE, NEEDS_OWNER_REVIEW, or UNKNOWN. Discovery never
+      reports VIOLATION.
+    value: ${{ steps.run.outputs.outcome }}
+  has_incomplete:
+    description: Whether the validated assessment contains incomplete evidence.
+    value: ${{ steps.run.outputs.has_incomplete }}
+  engine:
+    description: >-
+      Engine that produced the delivered report: http, opa, cedar, openfga, discovery,
+      or unknown when the run or validation failed before an engine could be determined.
+    value: ${{ steps.run.outputs.engine }}
+  report:
+    description: Path to the saved JSON report.
+    value: ${{ steps.run.outputs.report }}
+  markdown_report:
+    description: Path to the saved Markdown report.
+    value: ${{ steps.run.outputs.markdown_report }}
+  run_directory:
+    description: >-
+      Absolute path to the fresh run directory (for discovery, the directory holding
+      index.md and the pair directory).
+    value: ${{ steps.run.outputs.run_directory }}
+  revisions:
+    description: >-
+      Path to the saved revisions.json, present only when the run directory
+      contains that file (engine projects only).
+    value: ${{ steps.run.outputs.revisions }}
+
+runs:
+  using: composite
+  steps:
+    - id: validate
+      shell: bash
+      env:
+        LEGACY_BINARY: ${{ inputs.binary }}
+        LEGACY_CONFIG: ${{ inputs.config }}
+        AUTOMATIC_REPOSITORY: ${{ inputs.repository }}
+        AUTOMATIC_BASE: ${{ inputs.base }}
+        AUTOMATIC_HEAD: ${{ inputs.head }}
+        AUTOMATIC_SELECT: ${{ inputs.select }}
+        DISCOVERY: ${{ inputs.discovery }}
+        DISCOVERY_PROFILE: ${{ inputs.profile }}
+        ENGINE: ${{ inputs.engine }}
+      run: |
+        if [[ "$DISCOVERY" == "true" ]]; then
+          if [[ -z "$LEGACY_BINARY" && -z "$LEGACY_CONFIG" && -z "$AUTOMATIC_SELECT" && \
+                -z "$ENGINE" && -n "$AUTOMATIC_REPOSITORY" && \
+                -n "$AUTOMATIC_BASE" && -n "$AUTOMATIC_HEAD" && \
+                ( -z "$DISCOVERY_PROFILE" || "$DISCOVERY_PROFILE" =~ ^(default|large|xl)$ ) ]]; then
+            exit 0
+          fi
+          echo "counterbranch action: discovery requires repository+base+head, accepts profile default, large or xl, and rejects binary, config, select and engine" >&2
+          exit 2
+        fi
+        if [[ "$DISCOVERY" != "false" || -n "$DISCOVERY_PROFILE" ]]; then
+          echo "counterbranch action: discovery must be true or false; profile requires discovery" >&2
+          exit 2
+        fi
+        if [[ -n "$LEGACY_BINARY" && -n "$LEGACY_CONFIG" && \
+              -z "$AUTOMATIC_REPOSITORY" && \
+              -z "$AUTOMATIC_BASE" && -z "$AUTOMATIC_HEAD" && \
+              -z "$AUTOMATIC_SELECT" ]]; then
+          exit 0
+        fi
+        if [[ -z "$LEGACY_BINARY" && -z "$LEGACY_CONFIG" && \
+              -n "$AUTOMATIC_REPOSITORY" && \
+              -n "$AUTOMATIC_BASE" && -n "$AUTOMATIC_HEAD" ]]; then
+          exit 0
+        fi
+        echo "counterbranch action: provide either binary+config or repository+base+head" >&2
+        exit 2
+    - id: prepare
+      if: ${{ inputs.repository != '' && inputs.discovery != 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        STATE="$(mktemp -d "$RUNNER_TEMP/counterbranch-action.XXXXXX")"
+        export GH_CONFIG_DIR="$STATE/gh-config"
+        python3 "$GITHUB_ACTION_PATH/acquire.py" \
+          --output "$STATE/counterbranch-cli.tar.gz" \
+          > "$STATE/counterbranch-release.json"
+        CLI_SHA256="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sha256"])' "$STATE/counterbranch-release.json")"
+        CLI_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$STATE/counterbranch-release.json")"
+        python3 "$GITHUB_ACTION_PATH/install.py" \
+          "$STATE/counterbranch-cli.tar.gz" \
+          --sha256 "$CLI_SHA256" \
+          --version "$CLI_VERSION" \
+          --prefix "$STATE/install"
+        python3 "$GITHUB_ACTION_PATH/prepare_opa.py" \
+          --cache-root "$RUNNER_TOOL_CACHE" \
+          > "$STATE/counterbranch-opa-evidence.json"
+        printf '%s\n' \
+          "COUNTERBRANCH_PREPARED_BINARY=$STATE/install/bin/counterbranch" \
+          "COUNTERBRANCH_PREPARED_ARCHIVE=$STATE/counterbranch-cli.tar.gz" \
+          "COUNTERBRANCH_PREPARED_INSTALLER=$GITHUB_ACTION_PATH/install.py" \
+          >> "$GITHUB_ENV"
+    - id: cosign
+      if: ${{ inputs.discovery == 'true' }}
+      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      with:
+        cosign-release: v3.0.6
+    - id: prepare-discovery
+      if: ${{ inputs.discovery == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        STATE="$(mktemp -d "$RUNNER_TEMP/counterbranch-action.XXXXXX")"
+        export GH_CONFIG_DIR="$STATE/gh-config"
+        python3 "$GITHUB_ACTION_PATH/acquire.py" --kit \
+          --output "$STATE/counterbranch-kit.tar.gz" \
+          > "$STATE/counterbranch-release.json"
+        KIT_SHA256="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sha256"])' "$STATE/counterbranch-release.json")"
+        python3 "$GITHUB_ACTION_PATH/kit.py" \
+          --archive "$STATE/counterbranch-kit.tar.gz" \
+          --sha256 "$KIT_SHA256" \
+          --prefix "$STATE/kit"
+        printf '%s\n' "COUNTERBRANCH_PREPARED_BINARY=$STATE/kit/bin/counterbranch" >> "$GITHUB_ENV"
+    - id: run
+      shell: bash
+      env:
+        COUNTERBRANCH_ACTION_BINARY: ${{ inputs.binary || env.COUNTERBRANCH_PREPARED_BINARY }}
+        COUNTERBRANCH_ACTION_CONFIG: ${{ inputs.config }}
+        COUNTERBRANCH_ACTION_REPOSITORY: ${{ inputs.repository }}
+        COUNTERBRANCH_ACTION_BASE: ${{ inputs.base }}
+        COUNTERBRANCH_ACTION_HEAD: ${{ inputs.head }}
+        COUNTERBRANCH_ACTION_SELECT: ${{ inputs.select }}
+        COUNTERBRANCH_ACTION_CLI_ARCHIVE: ${{ inputs.repository != '' && inputs.discovery != 'true' && env.COUNTERBRANCH_PREPARED_ARCHIVE || '' }}
+        COUNTERBRANCH_ACTION_INPUT_BINARY: ${{ inputs.binary }}
+        XDG_CACHE_HOME: ${{ runner.tool_cache }}
+        COUNTERBRANCH_ACTION_TIMEOUT_SECONDS: ${{ inputs.timeout-seconds }}
+        COUNTERBRANCH_ACTION_ENGINE: ${{ inputs.engine }}
+        COUNTERBRANCH_ACTION_DISCOVERY: ${{ inputs.discovery }}
+        COUNTERBRANCH_ACTION_PROFILE: ${{ inputs.profile }}
+      run: python3 "$GITHUB_ACTION_PATH/run.py"
