@@ -172,10 +172,10 @@ def install(archive: Path, expected_sha256: str, version: str, prefix: Path,
     executable = bin_dir / "counterbranch"
     temporary_name: str | None = None
     published = False
-    staging = tempfile.TemporaryDirectory(prefix=".counterbranch-install-", dir=destination.parent)
+    # Removed with shutil.rmtree: Ubuntu 3.12 TemporaryDirectory.cleanup() binds rmtree at import.
+    staging = Path(tempfile.mkdtemp(prefix=".counterbranch-install-", dir=destination.parent))
     try:
-        temp = staging.name
-        stage = Path(temp) / destination.name
+        stage = staging / destination.name
         for name, data in files.items():
             output = stage / Path(*PurePosixPath(name).parts)
             output.parent.mkdir(parents=True, exist_ok=True)
@@ -216,16 +216,16 @@ def install(archive: Path, expected_sha256: str, version: str, prefix: Path,
                         raise
     except BaseException as error:
         try:
-            staging.cleanup()
+            shutil.rmtree(staging)
         except OSError as cleanup_error:
-            error.add_note(f"staging cleanup failed; inspect {staging.name}: {cleanup_error}")
+            error.add_note(f"staging cleanup failed; inspect {staging}: {cleanup_error}")
         raise
     else:
         try:
-            staging.cleanup()
+            shutil.rmtree(staging)
         except OSError as error:
             raise RuntimeError(
-                f"installation completed at {executable}, but staging cleanup failed; inspect {staging.name}"
+                f"installation completed at {executable}, but staging cleanup failed; inspect {staging}"
             ) from error
     return executable
 

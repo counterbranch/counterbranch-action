@@ -1,7 +1,7 @@
 {
   "build": {
     "exporter_sha256": "9d49601b945735239b3b24538625f3af8383682b7e2990f94cb1dc3c0f164f7c",
-    "source_date_epoch": 1790350263
+    "source_date_epoch": 1790352671
   },
   "files": {
     "LICENSE": {
@@ -11,8 +11,8 @@
     },
     "README.md": {
       "mode": "0644",
-      "sha256": "6ca4301f5561a398618cb464fe73fba835da8027d52b98dade8edfd9866de44e",
-      "size": 8700
+      "sha256": "1fe41dacbdcc4ff8d25c17fc3729c3cc6480197020567b298593a4ef93f6cd60",
+      "size": 5951
     },
     "acquire.py": {
       "mode": "0755",
@@ -31,8 +31,8 @@
     },
     "install.py": {
       "mode": "0755",
-      "sha256": "d36ead35361a0fb8abc402347376df4e686e2c0faae62966e7ae6431e4f31ba3",
-      "size": 10912
+      "sha256": "62ece71b3512726e69e60d33a399ea546f9bf1e6f7892641af902b8b21cc2e1f",
+      "size": 10975
     },
     "kit.py": {
       "mode": "0755",
@@ -46,7 +46,7 @@
     },
     "release-manifest.json": {
       "mode": "0644",
-      "sha256": "af8f1dd9945746b05ff222aea4892180bc0331e8880ade430b78198600b8d8cf",
+      "sha256": "897eb97e0d9966bcc2249f877fa4a974879d5480bb9d7dabdb4a069e3bad222f",
       "size": 1300
     },
     "run.py": {
@@ -90,15 +90,15 @@
     "tag": "v0.15.0",
     "version": "0.15.0",
     "wrapper_source": {
-      "git_commit": "65ec6f93db09d3af87410b6ab8895bc191cdf95a",
-      "git_tree": "44129a3c4c7d9ecbe4b32f57d63a77d2293d7ef1"
+      "git_commit": "b8b475492fedda5e384b052943760eca63e8a102",
+      "git_tree": "d32bde652c44f9eb37aebcc6b688d8e1d7036fb5"
     }
   },
   "source": {
     "distribution_clean": true,
     "distribution_status_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    "export_inputs_sha256": "45f748cb71430d06ff0676315a6ce54b9a1f04974b70bcd7b2ae11bd9d682019",
-    "git_commit": "65ec6f93db09d3af87410b6ab8895bc191cdf95a",
-    "git_tree": "44129a3c4c7d9ecbe4b32f57d63a77d2293d7ef1"
+    "export_inputs_sha256": "8256cb911e588c17d5470a53c42d04386ed6e4f862adae5db1c7207ce2faac7c",
+    "git_commit": "b8b475492fedda5e384b052943760eca63e8a102",
+    "git_tree": "d32bde652c44f9eb37aebcc6b688d8e1d7036fb5"
   }
 }
