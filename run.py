@@ -46,7 +46,7 @@ def ensure_not_cancelled() -> None:
         raise ActionCancelled("Counterbranch Action was cancelled")
 
 
-def interrupt_cli(process: subprocess.Popen[bytes], cancelled: bool) -> None:
+def interrupt_cli(process: subprocess.Popen[bytes], cancelled: bool, label: str = "Counterbranch CLI") -> None:
     try:
         os.killpg(process.pid, signal.SIGINT)
     except ProcessLookupError:
@@ -61,7 +61,7 @@ def interrupt_cli(process: subprocess.Popen[bytes], cancelled: bool) -> None:
         process.wait()
         exception = ActionCancelled if cancelled or CANCEL_REQUESTED.is_set() else ActionError
         raise exception(
-            "Counterbranch CLI required forced termination; cleanup is uncertain, inspect resources owned by this run"
+            f"{label} required forced termination; cleanup is uncertain, inspect resources owned by this run"
         ) from error
 
 
@@ -89,7 +89,17 @@ def delivered_run_directory(stdout: bytes, overflow: bool) -> Path:
     return directory
 
 
-def run_bounded(argv: list[str], timeout: int, stdout_limit: int = MAX_CAPTURE_BYTES) -> tuple[int, bytes, bool, bool]:
+def run_bounded(argv: list[str], timeout: int, stdout_limit: int = MAX_CAPTURE_BYTES,
+                env: dict[str, str] | None = None,
+                label: str = "Counterbranch CLI") -> tuple[int, bytes, bool, bool]:
+    """Return (status, stdout, overflow, timed_out)."""
+    return run_bounded_capture(argv, timeout, stdout_limit, env=env, label=label)[:4]
+
+
+def run_bounded_capture(argv: list[str], timeout: int, stdout_limit: int = MAX_CAPTURE_BYTES,
+                        env: dict[str, str] | None = None,
+                        label: str = "Counterbranch CLI") -> tuple[int, bytes, bool, bool, bytes]:
+    """Return (status, stdout, overflow, timed_out, stderr) with both streams bounded."""
     ensure_not_cancelled()
     try:
         process = subprocess.Popen(
@@ -98,10 +108,10 @@ def run_bounded(argv: list[str], timeout: int, stdout_limit: int = MAX_CAPTURE_B
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True,
-            env=cli_environment(),
+            env=cli_environment() if env is None else env,
         )
     except OSError as error:
-        raise ActionError("could not start the Counterbranch CLI") from error
+        raise ActionError(f"could not start the {label}") from error
 
     captures = [bytearray(), bytearray()]
     overflow = [False, False]
@@ -131,11 +141,11 @@ def run_bounded(argv: list[str], timeout: int, stdout_limit: int = MAX_CAPTURE_B
         deadline = time.monotonic() + timeout
         while True:
             if CANCEL_REQUESTED.is_set():
-                interrupt_cli(process, cancelled=True)
+                interrupt_cli(process, cancelled=True, label=label)
                 raise ActionCancelled("Counterbranch Action was cancelled")
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                interrupt_cli(process, cancelled=False)
+                interrupt_cli(process, cancelled=False, label=label)
                 status = process.returncode
                 timed_out = True
                 break
@@ -159,13 +169,69 @@ def run_bounded(argv: list[str], timeout: int, stdout_limit: int = MAX_CAPTURE_B
                 thread.join(timeout=CAPTURE_DRAIN_SECONDS)
             exception = ActionCancelled if CANCEL_REQUESTED.is_set() else ActionError
             if any(thread.is_alive() for thread in threads):
-                raise exception("Counterbranch CLI descendant cleanup is uncertain")
-            raise exception("Counterbranch CLI descendants retained output streams after the command exited")
+                raise exception(f"{label} descendant cleanup is uncertain")
+            raise exception(f"{label} descendants retained output streams after the command exited")
         for stream in (process.stdout, process.stderr):
             if stream is not None:
                 stream.close()
     ensure_not_cancelled()
-    return status, bytes(captures[0]), overflow[0], timed_out
+    return status, bytes(captures[0]), overflow[0], timed_out, bytes(captures[1])
+
+
+def locate_git() -> str:
+    # Relative PATH entries are skipped so the checkout cannot supply `git` (GitTool::locate_in).
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = os.path.join(directory, "git")
+        if os.path.isabs(directory) and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return os.path.realpath(candidate)
+    raise ActionError("cannot locate a git executable on an absolute PATH entry")
+
+
+def stderr_detail(stderr: bytes) -> str:
+    """Return the first nonblank stderr line as a bounded, printable suffix for an error message."""
+    line = next((line for line in stderr.decode("utf-8", errors="replace").splitlines() if line.strip()), "")
+    line = "".join(character for character in line if character.isprintable()).strip()[:200]
+    return f": {line}" if line else ""
+
+
+def resolve_merge_base(repository: str, base: str, head: str, timeout: int) -> str:
+    """Return the single merge base of `base` and `head`, as `git diff base...head` compares."""
+    # Follows the CLI's `git_command` environment plus its graft/replace-ref hardening; HOME is kept
+    # for the runner's safe.directory configuration. These commands never need the network.
+    environment = {key: value for key, value in os.environ.items() if key in {"PATH", "HOME"}}
+    environment.update({"LC_ALL": "C", "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0",
+                        "GIT_NO_REPLACE_OBJECTS": "1", "GIT_NO_LAZY_FETCH": "1", "GIT_GRAFT_FILE": "/dev/null"})
+    git = [locate_git(), "-C", repository, "-c", "core.fsmonitor=false", "-c", "core.useReplaceRefs=false",
+           "-c", "protocol.allow=never"]
+    history = "; the checkout must contain full history for base and head (actions/checkout fetch-depth: 0)"
+    # A shallow boundary makes merge-base succeed with an older common ancestor instead of failing.
+    status, stdout, _, timed_out, stderr = run_bounded_capture(
+        git + ["rev-parse", "--is-shallow-repository"], timeout, env=environment,
+        label="git rev-parse")
+    if status == 0 and stdout == b"true\n" and not timed_out:
+        raise ActionError("the checkout is shallow" + history)
+    if status != 0 or stdout != b"false\n" or timed_out:
+        reason = "timed out" if timed_out else "failed or returned unexpected output"
+        raise ActionError(f"git rev-parse --is-shallow-repository {reason}{stderr_detail(stderr)}")
+    status, stdout, overflow, timed_out, stderr = run_bounded_capture(
+        git + ["merge-base", "--all", base, head], timeout, env=environment,
+        label="git merge-base")
+    try:
+        text = stdout.decode("utf-8")
+    except UnicodeError:
+        text = None
+    if status == 1 and not stdout and not overflow and not timed_out:
+        raise ActionError("base and head share no history in the checkout" + history)
+    if not timed_out and status != 0 and re.search(rb"(?m)^fatal: (Not a valid (commit|object) name|bad object) ", stderr):
+        raise ActionError("base or head is missing from the checkout" + history)
+    lines = text[:-1].split("\n") if text and text.endswith("\n") else []
+    if (status != 0 or overflow or timed_out or not lines
+            or not all(COMMIT_RE.fullmatch(line) for line in lines)):
+        reason = "timed out" if timed_out else "failed or returned unexpected output"
+        raise ActionError(f"git merge-base {reason}{stderr_detail(stderr)}")
+    if len(lines) != 1:
+        raise ActionError("base and head have multiple merge bases; merge or rebase the head onto one base")
+    return lines[0]
 
 
 def write_github_file(variable: str, lines: list[str]) -> None:
@@ -180,7 +246,9 @@ def write_github_file(variable: str, lines: list[str]) -> None:
 
 
 def emit(outcome: str, incomplete: bool, engine: str, directory: Path | None, detail: str,
-         report: Path | None = None, markdown: Path | None = None, bodies: tuple[Path, ...] = ()) -> None:
+         report: Path | None = None, markdown: Path | None = None, bodies: tuple[Path, ...] = (),
+         tested: tuple[str, str] | None = None) -> None:
+    """`tested` is the (merge base, requested base) pair of a repository comparison."""
     output_lines = [f"outcome={outcome}", f"has_incomplete={str(incomplete).lower()}", f"engine={engine}"]
     if directory is not None:
         output_lines.extend([
@@ -191,14 +259,19 @@ def emit(outcome: str, incomplete: bool, engine: str, directory: Path | None, de
         revisions = directory / "revisions.json"
         if revisions.is_file():
             output_lines.append(f"revisions={revisions}")
+    if tested is not None:
+        output_lines.append(f"merge_base={tested[0]}")
     write_github_file("GITHUB_OUTPUT", output_lines)
     summary = [
         "## Counterbranch", "",
         f"Outcome: **{outcome}**",
         f"Incomplete: **{str(incomplete).lower()}**",
         f"Engine: **{engine}**",
-        "", detail,
     ]
+    if tested is not None:
+        requested = f" (requested base `{tested[1]}`)" if tested[1] != tested[0] else ""
+        summary.append(f"Tested merge base: `{tested[0]}`{requested}")
+    summary += ["", detail]
     remaining = MAX_SUMMARY_BODY_BYTES
     for body in bodies:
         try:
@@ -329,6 +402,7 @@ def _main() -> int:
     timeout: int | None = None
     repository = ""
     discovery = False
+    tested: tuple[str, str] | None = None
     try:
         ensure_not_cancelled()
         binary = Path(os.environ.get("COUNTERBRANCH_ACTION_BINARY", ""))
@@ -376,12 +450,6 @@ def _main() -> int:
                 raise ActionError("repository, base, and head must be nonempty and contain no control line breaks")
             if not COMMIT_RE.fullmatch(base) or not COMMIT_RE.fullmatch(head):
                 raise ActionError("base and head must be exact lowercase 40-character commit IDs")
-            argv = [str(binary), "run", "--repository", repository, "--base", base, "--head", head]
-            if discovery:
-                directory = Path(tempfile.mkdtemp(prefix="counterbranch-discovery-",
-                                                  dir=os.environ.get("RUNNER_TEMP") or None)) / "discovery"
-                argv[1:2] = ["discovery"]
-                argv += ["--output-dir", str(directory)] + (["--profile", profile] if profile else [])
             if "\r" in selectors or "\x00" in selectors:
                 raise ActionError("select must contain newline-separated repository-relative paths")
             for selector in selectors.splitlines():
@@ -389,6 +457,15 @@ def _main() -> int:
                 if (not selector or str(path) != selector or path.is_absolute() or "\\" in selector
                         or any(part in ("", ".", "..") for part in path.parts)):
                     raise ActionError("select must contain repository-relative paths")
+            # A pull request changes only what head adds since it branched from base.
+            tested = (resolve_merge_base(repository, base, head, timeout), base)
+            argv = [str(binary), "run", "--repository", repository, "--base", tested[0], "--head", head]
+            if discovery:
+                directory = Path(tempfile.mkdtemp(prefix="counterbranch-discovery-",
+                                                  dir=os.environ.get("RUNNER_TEMP") or None)) / "discovery"
+                argv[1:2] = ["discovery"]
+                argv += ["--output-dir", str(directory)] + (["--profile", profile] if profile else [])
+            for selector in selectors.splitlines():
                 argv.extend(["--select", selector])
         else:
             if not config or "\n" in config or "\r" in config:
@@ -403,12 +480,12 @@ def _main() -> int:
                 reason = "timed out" if timed_out else f"failed with exit status {status}"
                 raise ActionError(f"discovery {reason}")
             report, markdown = discovery_delivery(directory, head)
-            outcome, incomplete, engine = validate_report(binary, report, timeout, (base, head))
+            outcome, incomplete, engine = validate_report(binary, report, timeout, (tested[0], head))
             ensure_not_cancelled()
             emit(outcome, incomplete, engine, directory,
                  "The saved report is unauthenticated, static Discovery evidence. Its assessment is advisory; delivery does not establish a passing result.",
                  # index.md carries per-side notes, such as cleanup errors, absent from report.md.
-                 report, markdown, (markdown, directory / "index.md"))
+                 report, markdown, (markdown, directory / "index.md"), tested)
             return 0
         directory = delivered_run_directory(stdout, overflow)
         report = directory / "comparison.json"
@@ -422,7 +499,7 @@ def _main() -> int:
         outcome, incomplete, engine = validate_report(binary, report, timeout)
         ensure_not_cancelled()
         if repository:
-            validate_revisions(directory, repository, base, head, engine)
+            validate_revisions(directory, repository, tested[0], head, engine)
         if requested_engine and engine != requested_engine:
             # Deliberately does not raise into the `except` block below:
             # that block re-validates the saved report (a second CLI
@@ -435,6 +512,7 @@ def _main() -> int:
                 engine,
                 directory,
                 "The saved report is unauthenticated. Its assessment was preserved, but the delivered report's engine did not match the requested engine.",
+                tested=tested,
             )
             print(
                 f"counterbranch action: delivered report engine {engine} does not match the requested engine {requested_engine}",
@@ -442,12 +520,14 @@ def _main() -> int:
             )
             return 1
         if status != 0 or timed_out:
-            emit(outcome, incomplete, engine, directory, "The saved report is unauthenticated. Its assessment was preserved, but project execution failed.")
+            emit(outcome, incomplete, engine, directory, "The saved report is unauthenticated. Its assessment was preserved, but project execution failed.",
+                 tested=tested)
             reason = "timed out" if timed_out else f"failed with exit status {status}"
             print(f"counterbranch action: project execution {reason}", file=sys.stderr)
             return 1
         ensure_not_cancelled()
-        emit(outcome, incomplete, engine, directory, "The saved report is unauthenticated. Its assessment is advisory; delivery does not establish a passing result.")
+        emit(outcome, incomplete, engine, directory, "The saved report is unauthenticated. Its assessment is advisory; delivery does not establish a passing result.",
+             tested=tested)
         return 0
     except ActionCancelled as error:
         return cancelled_result(error)

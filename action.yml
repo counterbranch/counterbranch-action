@@ -13,11 +13,13 @@ inputs:
     required: false
     default: ""
   repository:
-    description: Repository containing the base and head revisions to compare.
+    description: Repository containing base, head and their merge base, which is compared against head.
     required: false
     default: ""
   base:
-    description: Base Git revision.
+    description: >-
+      Target-side Git commit. In repository mode the Action compares the merge base of
+      base and head against head, so the checkout needs full history (fetch-depth: 0).
     required: false
     default: ""
   head:
@@ -29,7 +31,7 @@ inputs:
     required: false
     default: ""
   timeout-seconds:
-    description: Maximum time for each CLI invocation.
+    description: Maximum time for each CLI invocation, applied separately to each git call the Action makes.
     required: false
     default: "900"
   engine:
@@ -40,8 +42,9 @@ inputs:
     default: ""
   discovery:
     description: >-
-      "true" runs a static, advisory Discovery comparison of repository base/head
-      with the signed paired kit instead of a policy engine comparison.
+      "true" runs a static, advisory Discovery comparison of the merge base of
+      repository base and head against head with the signed paired kit instead of
+      a policy engine comparison.
     required: false
     default: "false"
   profile:
@@ -79,6 +82,11 @@ outputs:
       Path to the saved revisions.json, present only when the run directory
       contains that file (engine projects only).
     value: ${{ steps.run.outputs.revisions }}
+  merge_base:
+    description: >-
+      Merge base of base and head that the repository comparison used as its base,
+      present only when a validated repository or Discovery report is delivered.
+    value: ${{ steps.run.outputs.merge_base }}
 
 runs:
   using: composite

@@ -1,8 +1,8 @@
 # Counterbranch Action
 
 See what a pull request newly allows or denies before it ships. The Action
-compares the pull request's base and head commits and puts the report in the
-job summary.
+compares the pull request's head commit with its merge base on the target
+branch, like `git diff base...head`, and puts the report in the job summary.
 
 ## Quick start
 
@@ -45,7 +45,8 @@ That's it. Open a pull request and read the report in the run's summary.
 
 - **Runner:** `ubuntu-24.04` (x86_64) or macOS on Apple silicon. Older Ubuntu
   images may lack the glibc the kit needs.
-- **Full clone:** `fetch-depth: 0`, so both commits are present.
+- **Full clone:** `fetch-depth: 0`, so both commits and their merge base are
+  present. A shallow checkout reports `UNKNOWN`.
 - **Permissions:** `contents: read`. The Action downloads a public release with
   the job's `github.token` and passes no credentials to the scan.
 
@@ -85,9 +86,9 @@ To keep the full reports, upload the run directory:
 | --- | --- | --- |
 | `discovery` | `"false"` | `"true"` runs a Discovery comparison. |
 | `repository` | | Path to the clone. |
-| `base`, `head` | | Full 40-character commit SHAs to compare. |
+| `base`, `head` | | Full 40-character commit SHAs. Pass the target branch tip as `base`; without `config`, the Action compares `head` against the merge base of the two. |
 | `profile` | `default` | Discovery scan size: `default`, `large` or `xl`. |
-| `timeout-seconds` | `900` | Limit per CLI run, 1 to 3600. Raise it for `large` and `xl`. |
+| `timeout-seconds` | `900` | Limit per CLI run, 1 to 3600, applied separately to each git call the Action makes. Raise it for `large` and `xl`. |
 | `select` | | Policy mode only: newline-separated policy files. |
 | `engine` | | Policy mode only: expected engine (`http`, `opa`, `cedar`, `openfga`). |
 | `binary`, `config` | | Configured mode only: a preinstalled CLI and project config. |
@@ -103,12 +104,14 @@ To keep the full reports, upload the run directory:
 | `run_directory` | Directory with every file the run wrote. |
 | `engine` | Engine that produced the report, such as `discovery`. |
 | `revisions` | Path to `revisions.json` (policy projects only). |
+| `merge_base` | Merge base used as the comparison's base. Set only when a Discovery or policy-mode report is delivered; not in configured mode. |
 
 ## Discovery mode
 
-Discovery is a static, advisory scan of the code in both commits. It is not a
-policy decision and doesn't run your application. It rejects `binary`,
-`config`, `select` and `engine`. It never reports `VIOLATION`.
+Discovery is a static, advisory scan of the code at the head commit and the
+merge base. It is not a policy decision and doesn't run your application. It
+rejects `binary`, `config`, `select` and `engine`. It never reports
+`VIOLATION`.
 
 ## Policy mode
 
@@ -164,7 +167,11 @@ the job's token.
 
 The Action doesn't comment on pull requests. To post the report, run
 `counterbranch comment --input <report>` in a separate step with its own
-permissions.
+permissions. `comment --post` accepts the report's merge-base comparison even
+when the target branch has advanced: it requires the pull request's exact head
+and, only when the pull request's base differs from the tested base, asks
+GitHub whether the tested base is the pull request's merge base. See
+[PR comments](https://github.com/counterbranch/counterbranch/blob/main/docs/pr-comments.md#explicitly-publish).
 
 ## License
 
