@@ -1,7 +1,7 @@
 {
   "build": {
     "exporter_sha256": "9d49601b945735239b3b24538625f3af8383682b7e2990f94cb1dc3c0f164f7c",
-    "source_date_epoch": 1790543018
+    "source_date_epoch": 1790565394
   },
   "files": {
     "LICENSE": {
@@ -26,8 +26,8 @@
     },
     "common.py": {
       "mode": "0755",
-      "sha256": "c47ad44840696b056bd5ae58f19bd79aec89140e3a0e49703b14131835e0800c",
-      "size": 4355
+      "sha256": "9b636c5438aeff195c81e837994a8919b8002d171ff93bb56ba8016ce5e7e952",
+      "size": 4536
     },
     "install.py": {
       "mode": "0755",
@@ -46,7 +46,7 @@
     },
     "release-manifest.json": {
       "mode": "0644",
-      "sha256": "96008f98977b821c372d3142503bf69cf4f55cce924ffaaa99036153eb3672c9",
+      "sha256": "3448fe3b240eed8f41565baf79c6f8ae3318a8060ba70e06423881e0f8f224c7",
       "size": 1300
     },
     "run.py": {
@@ -59,46 +59,46 @@
   "name": "counterbranch-action",
   "release": {
     "binary_source": {
-      "git_commit": "a653dadd088a678fbcb908f0f78e61bfa166fa59",
-      "git_tree": "1462ead891d9fa5d0f7d65e3098d7d18e040a6a4"
+      "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
+      "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
     },
     "format": 1,
     "kits": {
       "aarch64-apple-darwin": {
         "bundle": {
           "name": "counterbranch-alpha-aarch64-apple-darwin.tar.gz.sigstore.json",
-          "sha256": "6fd9ce6234f5ee2fde7e1dddfeb4e505118a7d503a9b48b7a02ae59f804bfcbc",
-          "size": 10591
+          "sha256": "4ffc81498dc1159a3222cd0891bd91a220ec71694ebe2dc66c061607ed47f328",
+          "size": 10643
         },
         "name": "counterbranch-alpha-aarch64-apple-darwin.tar.gz",
-        "sha256": "bbc9e69d1fcecc9f352d4020686eb85c514d188210f9d6ebc7f0094cc466c5c2",
-        "size": 14728532
+        "sha256": "2b30086dafb664a687d623f690dd292d4ada5da23bd7b9f1af8945e2253cb5fa",
+        "size": 14913210
       },
       "x86_64-unknown-linux-gnu": {
         "bundle": {
           "name": "counterbranch-alpha-x86_64-unknown-linux-gnu.tar.gz.sigstore.json",
-          "sha256": "086e5f59306904856c532e5e77dbf2b04de8e65ca63cf6ac67f12271ea43ff24",
-          "size": 10803
+          "sha256": "ce9f5541005f76b959e973f4f8fc7bef662d8b5e914f9c5823f88022ab911e83",
+          "size": 10463
         },
         "name": "counterbranch-alpha-x86_64-unknown-linux-gnu.tar.gz",
-        "sha256": "1b7a3378a8745d4ff0b4491fa35f07800c5705745237ac5ba03aa74523b1bd81",
-        "size": 16171244
+        "sha256": "86844c46e0d3ffa4d9a097295d9199bbeb08e04a68971e90bdcff2ec19845ed6",
+        "size": 16350789
       }
     },
     "repository": "counterbranch/releases",
     "status": "approved",
-    "tag": "v0.23.0",
-    "version": "0.23.0",
+    "tag": "v0.24.0",
+    "version": "0.24.0",
     "wrapper_source": {
-      "git_commit": "a653dadd088a678fbcb908f0f78e61bfa166fa59",
-      "git_tree": "1462ead891d9fa5d0f7d65e3098d7d18e040a6a4"
+      "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
+      "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
     }
   },
   "source": {
     "distribution_clean": true,
     "distribution_status_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    "export_inputs_sha256": "5fa458773bc59402235bbb37ba2cabf4bb05586a8932876b52dcc972e2542008",
-    "git_commit": "a653dadd088a678fbcb908f0f78e61bfa166fa59",
-    "git_tree": "1462ead891d9fa5d0f7d65e3098d7d18e040a6a4"
+    "export_inputs_sha256": "85d078ee6b8747952ed4a73436b74e30ccb21068fc842ced2f8f79d68f2bd394",
+    "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
+    "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
   }
 }

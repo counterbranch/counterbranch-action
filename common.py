@@ -55,7 +55,8 @@ def environment() -> dict[str, str]:
 
 
 def run(args: list[str], root: Path, env: dict[str, str] | None = None,
-        timeout: int = 900, limit: int = 8 * 1024 * 1024, combined: bool = False) -> str:
+        timeout: int = 900, limit: int = 8 * 1024 * 1024, combined: bool = False,
+        expected_status: int = 0) -> str:
     """Never return raw subprocess diagnostics in a release record."""
     process = subprocess.Popen(args, cwd=root, env=environment() if env is None else env,
                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -81,8 +82,9 @@ def run(args: list[str], root: Path, env: dict[str, str] | None = None,
                     if combined or key.fileobj is process.stdout:
                         captured.extend(chunk)
             status = process.wait(timeout=max(0.01, deadline - time.monotonic()))
-            if status:
-                raise ValueError(f"process failed with exit status {status}")
+            if status != expected_status:
+                raise ValueError(f"process failed with exit status {status}" if not expected_status
+                                 else f"process exited with status {status}; expected {expected_status}")
         return captured.decode("utf-8").strip()
     finally:
         try:
