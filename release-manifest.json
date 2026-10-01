@@ -1,37 +1,5 @@
 {
-  "binary_source": {
-    "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
-    "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
-  },
-  "format": 1,
-  "kits": {
-    "aarch64-apple-darwin": {
-      "bundle": {
-        "name": "counterbranch-alpha-aarch64-apple-darwin.tar.gz.sigstore.json",
-        "sha256": "4ffc81498dc1159a3222cd0891bd91a220ec71694ebe2dc66c061607ed47f328",
-        "size": 10643
-      },
-      "name": "counterbranch-alpha-aarch64-apple-darwin.tar.gz",
-      "sha256": "2b30086dafb664a687d623f690dd292d4ada5da23bd7b9f1af8945e2253cb5fa",
-      "size": 14913210
-    },
-    "x86_64-unknown-linux-gnu": {
-      "bundle": {
-        "name": "counterbranch-alpha-x86_64-unknown-linux-gnu.tar.gz.sigstore.json",
-        "sha256": "ce9f5541005f76b959e973f4f8fc7bef662d8b5e914f9c5823f88022ab911e83",
-        "size": 10463
-      },
-      "name": "counterbranch-alpha-x86_64-unknown-linux-gnu.tar.gz",
-      "sha256": "86844c46e0d3ffa4d9a097295d9199bbeb08e04a68971e90bdcff2ec19845ed6",
-      "size": 16350789
-    }
-  },
-  "repository": "counterbranch/releases",
-  "status": "approved",
-  "tag": "v0.24.0",
-  "version": "0.24.0",
-  "wrapper_source": {
-    "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
-    "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
-  }
+  "edition": "scanner-only",
+  "format": 2,
+  "status": "publisher-approval-pending"
 }

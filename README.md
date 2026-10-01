@@ -1,178 +1,44 @@
-# Counterbranch Action
+# Counterbranch scanner Action
 
-See what a pull request newly allows or denies before it ships. The Action
-compares the pull request's head commit with its merge base on the target
-branch, like `git diff base...head`, and puts the report in the job summary.
+This source-free Action compares static authorization coverage between exact Git commits using the
+scanner-only Counterbranch and Discovery editions. It does not execute the application, custom rules,
+recipes, policy runtimes, MCP, agents, or adapters. Reports are advisory and preserve incomplete evidence.
 
-## Quick start
+The checked-in release manifest remains publisher-approval-pending, so acquisition fails closed. A reviewed
+export is gated by default until a real signup issuer and validator exist. A publisher may explicitly export
+an open build whose gate is a no-op. The open mode does not implement signup or token issuance, verify license
+acceptance, authenticate a supplied token, enforce licensing, or meter offline usage. Signup tokens are never
+passed to scanner processes; open mode rejects a supplied token rather than implying it was validated.
+The Action checks the embedded gate and release-manifest approval before installing Cosign or making an
+acquisition request. Setup, authentication, and scan failures expose `UNKNOWN` and `has_incomplete=true`.
 
-Add `.github/workflows/counterbranch.yml`:
+Use `actions/checkout` with `fetch-depth: 0`, then provide the absolute checkout path and exact lowercase
+40-character `base` and `head` commit IDs. The Action computes their single merge base and compares it with
+head. Inspect `outcome` and `has_incomplete`; successful Action execution does not mean the assessment is clean.
 
-```yaml
-name: Counterbranch
-on: pull_request
-
-permissions:
-  contents: read
-
-jobs:
-  discovery:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: counterbranch/counterbranch-action@<commit-sha> # vX.Y.Z
-        with:
-          discovery: "true"
-          repository: ${{ github.workspace }}
-          base: ${{ github.event.pull_request.base.sha }}
-          head: ${{ github.event.pull_request.head.sha }}
-```
-
-Replace `<commit-sha>` with the full commit SHA of a
-[release tag](https://github.com/counterbranch/counterbranch-action/tags):
-
-```sh
-git ls-remote https://github.com/counterbranch/counterbranch-action 'refs/tags/vX.Y.Z^{}'
-```
-
-That's it. Open a pull request and read the report in the run's summary.
-
-## Requirements
-
-- **Runner:** `ubuntu-24.04` (x86_64) or macOS on Apple silicon. Older Ubuntu
-  images may lack the glibc the kit needs.
-- **Full clone:** `fetch-depth: 0`, so both commits and their merge base are
-  present. A shallow checkout reports `UNKNOWN`.
-- **Permissions:** `contents: read`. The Action downloads a public release with
-  the job's `github.token` and passes no credentials to the scan.
-
-## Reading the result
-
-The step succeeds whenever it delivers a validated report, whatever the report
-says. Use the `outcome` output to decide what to do:
-
-| `outcome` | Meaning |
-| --- | --- |
-| `CLEAN` | No access changes found. Not a merge approval. |
-| `NEEDS_OWNER_REVIEW` | Access changes someone should look at. |
-| `VIOLATION` | Policy mode only: a decision breaks an approved expectation. |
-| `INCOMPLETE` | Part of the comparison couldn't be checked. |
-| `UNKNOWN` | The run failed. The step fails too. |
-
-To fail the job on anything but `CLEAN`, give the step an `id` and add:
+Publication is currently held. After a reviewed release is published, pin the Action to the exact published
+commit rather than a moving branch or tag:
 
 ```yaml
-      - if: steps.counterbranch.outputs.outcome != 'CLEAN'
-        run: exit 1
+- uses: counterbranch/counterbranch-action@REPLACE_WITH_REVIEWED_40_CHARACTER_COMMIT
+  with:
+    repository: ${{ github.workspace }}
+    base: REPLACE_WITH_EXACT_BASE_COMMIT
+    head: ${{ github.sha }}
 ```
 
-To keep the full reports, upload the run directory:
+The repository input must name a full, non-shallow checkout containing both revisions. The optional profile
+selects the static scan bounds. `timeout-seconds` caps the entire two-sided comparison command
+(default 1800, maximum 3600); it does not change each scan profile's internal timeout. Git and saved-report
+validation commands have a separate cap of at most 120 seconds (or the shorter requested comparison deadline).
+The publisher chooses the embedded access mode when exporting the Action; workflow callers cannot change it.
 
-```yaml
-      - if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: counterbranch
-          path: ${{ steps.counterbranch.outputs.run_directory }}
-```
+The Action writes `outcome`, `has_incomplete`, `report`, `markdown_report`, `run_directory`, and `merge_base`
+outputs. The step summary includes the static Markdown comparison. Treat `INCOMPLETE` and `UNKNOWN` as requiring
+follow-up, and inspect incomplete reasons even when a report was produced. The authenticated paired kit is
+checked against its reviewed manifest, GitHub release attestation, Sigstore bundle, exact digest, and size before
+either bundled executable runs.
 
-## Inputs
-
-| Input | Default | Description |
-| --- | --- | --- |
-| `discovery` | `"false"` | `"true"` runs a Discovery comparison. |
-| `repository` | | Path to the clone. |
-| `base`, `head` | | Full 40-character commit SHAs. Pass the target branch tip as `base`; without `config`, the Action compares `head` against the merge base of the two. |
-| `profile` | `default` | Discovery scan size: `default`, `large` or `xl`. |
-| `timeout-seconds` | `900` | Limit per CLI run, 1 to 3600, applied separately to each git call the Action makes. Raise it for `large` and `xl`. |
-| `select` | | Policy mode only: newline-separated policy files. |
-| `engine` | | Policy mode only: expected engine (`http`, `opa`, `cedar`, `openfga`). |
-| `binary`, `config` | | Configured mode only: a preinstalled CLI and project config. |
-
-## Outputs
-
-| Output | Description |
-| --- | --- |
-| `outcome` | See [Reading the result](#reading-the-result). |
-| `has_incomplete` | `true` if any evidence is incomplete. |
-| `report` | Path to the JSON report. |
-| `markdown_report` | Path to the Markdown report. |
-| `run_directory` | Directory with every file the run wrote. |
-| `engine` | Engine that produced the report, such as `discovery`. |
-| `revisions` | Path to `revisions.json` (policy projects only). |
-| `merge_base` | Merge base used as the comparison's base. Set only when a Discovery or policy-mode report is delivered; not in configured mode. |
-
-## Discovery mode
-
-Discovery is a static, advisory scan of the code at the head commit and the
-merge base. It is not a policy decision and doesn't run your application. It
-rejects `binary`, `config`, `select` and `engine`. It never reports
-`VIOLATION`.
-
-## Policy mode
-
-Without `discovery`, the Action compares policy files with an engine such as
-OPA:
-
-```yaml
-      - uses: counterbranch/counterbranch-action@<commit-sha> # vX.Y.Z
-        with:
-          repository: ${{ github.workspace }}
-          base: ${{ github.event.pull_request.base.sha }}
-          head: ${{ github.event.pull_request.head.sha }}
-          select: |
-            policy/main.rego
-          engine: opa
-```
-
-Policy mode needs a release that includes the Counterbranch CLI archives.
-Current releases ship only the Discovery kits, so policy mode stops with an
-error that points you to `discovery: "true"`.
-
-Configured mode runs a CLI you installed yourself against a project config:
-
-```yaml
-      - uses: counterbranch/counterbranch-action@<commit-sha> # vX.Y.Z
-        with:
-          binary: /absolute/path/to/counterbranch
-          config: /absolute/path/to/project.json
-```
-
-## What the Action verifies
-
-Each Action commit pins one release of
-[`counterbranch/releases`](https://github.com/counterbranch/releases) in
-`release-manifest.json`, by name, size and SHA-256. Before running anything,
-the Action:
-
-1. downloads the kit for the runner and checks its size and SHA-256 against
-   the manifest;
-2. checks GitHub's release attestation with `gh release verify-asset`;
-3. verifies the kit's Sigstore signature with cosign v3.0.6, which it installs.
-   The signature must come from the Counterbranch `Publish` workflow:
-
-   ```sh
-   cosign verify-blob --bundle <kit>.sigstore.json \
-     --certificate-identity https://github.com/counterbranch/counterbranch/.github/workflows/publish.yml@refs/heads/main \
-     --certificate-oidc-issuer https://token.actions.githubusercontent.com <kit>
-   ```
-
-Any failure stops the step before the kit is extracted. The scan gets only `PATH`,
-`HOME`, the cache and temp directories and locale settings, so it never sees
-the job's token.
-
-The Action doesn't comment on pull requests. To post the report, run
-`counterbranch comment --input <report>` in a separate step with its own
-permissions. `comment --post` accepts the report's merge-base comparison even
-when the target branch has advanced: it requires the pull request's exact head
-and, only when the pull request's base differs from the tested base, asks
-GitHub whether the tested base is the pull request's merge base. See
-[PR comments](https://github.com/counterbranch/counterbranch/blob/main/docs/pr-comments.md#explicitly-publish).
-
-## License
-
-Apache-2.0. See [LICENSE](LICENSE).
+This alpha is provided as-is for static evaluation. The supported build targets are macOS arm64 and Linux x86-64 GNU.
+Each target still requires release qualification; synthetic checks do not establish customer application behavior. See `LICENSE` for
+the software license and the packaged kit notices for bundled dependency terms.
