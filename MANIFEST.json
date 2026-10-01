@@ -1,8 +1,8 @@
 {
   "build": {
-    "access_mode": "gated",
-    "exporter_sha256": "aa61085291e4c6f4a61482ac0c80732988b3db0e41eeb725846436686bf9203e",
-    "source_date_epoch": 1790861547
+    "access_mode": "open",
+    "exporter_sha256": "eb0121ee8624a88d77fd2bb5d519185cb5f881671fdee0f440ec3ebb97d72a3b",
+    "source_date_epoch": 1790893095
   },
   "edition": "scanner-only",
   "files": {
@@ -13,23 +13,23 @@
     },
     "README.md": {
       "mode": "0644",
-      "sha256": "1cd6479e6805724307518501396ed63272ff1572ef2da5cd88613d07ca7be788",
-      "size": 3128
+      "sha256": "debb52fcf72244f2fa0f9066977dea5c40cb7faa54a40f67c71f9439f7e226c8",
+      "size": 3650
     },
     "acquire.py": {
       "mode": "0755",
-      "sha256": "edaa6a411cc01165618373271ed6f5aa56910c0018d39419f6f72843e9154d7b",
-      "size": 18412
+      "sha256": "225fcb849036a87fd313262db7c7f04ccb5cd5b3a31bd280f6b6dab35218c258",
+      "size": 19392
     },
     "action.yml": {
       "mode": "0644",
-      "sha256": "7f963b0e977a8d8ad0b70f441c5464e24d64a85ca5acbc6493d8eb9e4c8b7282",
-      "size": 4341
+      "sha256": "d616006f1fc6f9476d29fb5efe422f50f4106bc019207efc0daed326ea746a21",
+      "size": 4503
     },
     "release-manifest.json": {
       "mode": "0644",
-      "sha256": "2384d7bfbe8bc3772d9ecb99ee7db4fccc72423057a86270793a687f061fa50b",
-      "size": 89
+      "sha256": "cd24aa3658ceb04fe309cefa396a111fd286cd8d933ef85b28c7b64a13dcedb8",
+      "size": 1124
     },
     "run.py": {
       "mode": "0755",
@@ -38,20 +38,48 @@
     },
     "scanner_kit.py": {
       "mode": "0755",
-      "sha256": "0795e855e0a8e6bb70bae575ff45793c3f6689599394f92e76da1a509aea6636",
-      "size": 26068
+      "sha256": "a54f176ac74b41bd990322bf481e311bd1462e2fa5cf68bcc1245200f49a0367",
+      "size": 26182
     }
   },
   "format": 2,
   "name": "counterbranch-scanner-action",
   "release": {
+    "core_source": {
+      "commit": "b1d165dfe6fbd07e970949678f0503d1f5082d53",
+      "dirty": false,
+      "repository": "https://github.com/counterbranch/counterbranch",
+      "tree": "f73532e9b0c18481a2dc14142a86d546a83c82ee"
+    },
+    "discovery_source": {
+      "commit": "d0d5dfe44b58ebcc1db21585e18be6edccb2d6ac",
+      "dirty": false,
+      "repository": "https://github.com/counterbranch/discovery",
+      "tree": "78338e69c84dd3d8265682cd4b3bbdfbf69a9cc4"
+    },
     "edition": "scanner-only",
     "format": 2,
-    "status": "publisher-approval-pending"
+    "kits": {
+      "x86_64-unknown-linux-gnu": {
+        "bundle": {
+          "name": "counterbranch-scanner-only-alpha-x86_64-unknown-linux-gnu.tar.gz.sigstore.json",
+          "sha256": "15fd3ebdd920ff695eebf52a424f2d29c5b619dddc5ff8009698464edd287bc1",
+          "size": 10775
+        },
+        "edition": "scanner-only",
+        "name": "counterbranch-scanner-only-alpha-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "7b070d9d8df04eb5dd19e2af6089142f0c2c1d996edba5c740f192423ed49267",
+        "size": 9757266
+      }
+    },
+    "repository": "counterbranch/alpha-releases",
+    "status": "approved",
+    "tag": "v0.41.3",
+    "version": "0.41.3"
   },
   "source": {
     "distribution_clean": true,
-    "git_commit": "2acd70ac2c23f815a804377249e05c4d5a949ce2",
-    "git_tree": "855d58e6949b651a5ebcdf6b6023810ff42db1f2"
+    "git_commit": "8095625383ea69064d961708d093f8ac3f131045",
+    "git_tree": "e48782ed9ce7382fd96eea27011a90abcb2fbd49"
   }
 }

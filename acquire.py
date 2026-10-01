@@ -17,8 +17,6 @@ import threading
 import time
 
 SUPPORTED_TARGETS = {
-    ("Darwin", "arm64"): "aarch64-apple-darwin",
-    ("Darwin", "aarch64"): "aarch64-apple-darwin",
     ("Linux", "x86_64"): "x86_64-unknown-linux-gnu",
     ("Linux", "amd64"): "x86_64-unknown-linux-gnu",
 }
@@ -38,6 +36,7 @@ RELEASE_PREDICATES = ("https://in-toto.io/attestation/release/v0.1",
                       "https://in-toto.io/attestation/release/v0.2")
 RELEASE_FORMAT = 2
 RELEASE_EDITION = "scanner-only"
+SCANNER_RELEASE_REPOSITORY = "counterbranch/alpha-releases"
 RELEASE_TARGETS = frozenset(SUPPORTED_TARGETS.values())
 RELEASE_FIELDS = frozenset({
     "format", "edition", "status", "repository", "tag", "version", "kits",
@@ -74,7 +73,7 @@ def host_target() -> str:
     try:
         return SUPPORTED_TARGETS[(platform.system(), platform.machine().lower())]
     except KeyError as error:
-        raise RuntimeError("Counterbranch releases support only macOS arm64 and Linux x86_64 GNU") from error
+        raise RuntimeError("The public Counterbranch scanner Action supports only Linux x86_64 GNU") from error
 
 
 def sha256(path: Path) -> str:
@@ -119,7 +118,7 @@ def load_release(path: Path, target: str, kit: bool = False) -> tuple[str, str, 
         if "assets" in value or not isinstance(kits, dict) or set(kits) != RELEASE_TARGETS:
             raise ValueError("release manifest must contain exactly the supported scanner-only kits")
         repository, tag, version = value["repository"], value["tag"], value["version"]
-        if (repository != "counterbranch/releases" or not isinstance(version, str)
+        if (repository != SCANNER_RELEASE_REPOSITORY or not isinstance(version, str)
                 or not VERSION_RE.fullmatch(version) or tag != f"v{version}"):
             raise ValueError("release repository, tag, or version is invalid")
         for field, expected_repository in (
@@ -175,6 +174,23 @@ def load_release(path: Path, target: str, kit: bool = False) -> tuple[str, str, 
     if identities[0][0] == identities[1][0]:
         raise ValueError("release manifest contains an invalid identity")
     return repository, tag, version, *identities[0], identities[1]
+
+
+def preflight(manifest: Path) -> dict[str, str]:
+    """Validate the public host and complete paired-kit manifest without network access."""
+    target = host_target()
+    repository, tag, version, name, digest, _size, bundle = load_release(
+        manifest, target, kit=True
+    )
+    return {
+        "repository": repository,
+        "tag": tag,
+        "version": version,
+        "target": target,
+        "asset": name,
+        "sha256": digest,
+        "bundle": bundle[0],
+    }
 
 
 def run_gh(argv: list[str], env: dict[str, str], label: str = "GitHub release") -> bytes:
@@ -337,12 +353,21 @@ def acquire(manifest: Path, output: Path, gh: str = "gh", target: str | None = N
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=Path(__file__).with_name("release-manifest.json"))
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--preflight", action="store_true",
+                        help="Validate the public host and approved paired-kit manifest without network access")
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--gh", default="gh")
     parser.add_argument("--archive", type=Path, help="Verify an already available archive through the same release path")
     parser.add_argument("--kit", action="store_true", help="Acquire the paired kit and verify its Sigstore bundle")
     parser.add_argument("--cosign", default="cosign")
     args = parser.parse_args()
+    if args.preflight:
+        if args.output is not None or args.archive is not None or args.kit:
+            parser.error("--preflight cannot be combined with acquisition options")
+        print(json.dumps(preflight(args.manifest), sort_keys=True))
+        return 0
+    if args.output is None:
+        parser.error("--output is required unless --preflight is used")
     print(json.dumps(acquire(args.manifest, args.output, args.gh, archive=args.archive,
                              kit=args.kit, cosign=args.cosign), sort_keys=True))
     return 0

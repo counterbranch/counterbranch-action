@@ -32,8 +32,9 @@ DISCOVERY_REPOSITORY = "https://github.com/counterbranch/discovery"
 DISCOVERY_VERSION = "0.24.0"
 DISCOVERY_COMMIT = "d0d5dfe44b58ebcc1db21585e18be6edccb2d6ac"
 DISCOVERY_TREE = "78338e69c84dd3d8265682cd4b3bbdfbf69a9cc4"
-RELEASE_REPOSITORY = "counterbranch/releases"
+SCANNER_RELEASE_REPOSITORY = "counterbranch/alpha-releases"
 TARGETS = frozenset({"aarch64-apple-darwin", "x86_64-unknown-linux-gnu"})
+PUBLIC_RELEASE_TARGETS = frozenset({"x86_64-unknown-linux-gnu"})
 
 MAX_ARCHIVE_SIZE = 512 * 1024 * 1024
 MAX_EXPANDED_SIZE = 512 * 1024 * 1024
@@ -401,7 +402,7 @@ def _release_source(value: object, repository: str, label: str) -> tuple[str, st
 
 def load_release(path: Path, target: str, supplied_sha256: str) -> dict[str, object]:
     """Load one expected kit from the exact approved scanner release-manifest schema."""
-    if target not in TARGETS:
+    if target not in PUBLIC_RELEASE_TARGETS:
         raise ValueError("release target is unsupported")
     supplied_sha256 = _digest(supplied_sha256, "supplied kit digest")
     value = strict_json(_bounded_regular_file(path, MAX_RELEASE_MANIFEST_SIZE, "release manifest"),
@@ -409,7 +410,7 @@ def load_release(path: Path, target: str, supplied_sha256: str) -> dict[str, obj
     release = _exact_object(value, RELEASE_FIELDS, "release manifest")
     if (type(release.get("format")) is not int or release.get("format") != 2
             or release.get("edition") != EDITION or release.get("status") != "approved"
-            or release.get("repository") != RELEASE_REPOSITORY):
+            or release.get("repository") != SCANNER_RELEASE_REPOSITORY):
         raise ValueError("release manifest is not an approved scanner-only format 2 release")
     version = release.get("version")
     if (not isinstance(version, str) or not VERSION_RE.fullmatch(version)
@@ -423,8 +424,8 @@ def load_release(path: Path, target: str, supplied_sha256: str) -> dict[str, obj
     if (discovery_commit, discovery_tree) != (DISCOVERY_COMMIT, DISCOVERY_TREE):
         raise ValueError("release Discovery source differs from the supported scanner pin")
     kits = release.get("kits")
-    if not isinstance(kits, dict) or set(kits) != TARGETS:
-        raise ValueError("release manifest must contain exactly the supported scanner-only kits")
+    if not isinstance(kits, dict) or set(kits) != PUBLIC_RELEASE_TARGETS:
+        raise ValueError("release manifest must contain exactly the public Linux scanner kit")
     selected = None
     for kit_target, item_value in kits.items():
         item = _exact_object(item_value, RELEASE_KIT_FIELDS, f"release kit {kit_target}")

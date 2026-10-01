@@ -1,5 +1,33 @@
 {
+  "core_source": {
+    "commit": "b1d165dfe6fbd07e970949678f0503d1f5082d53",
+    "dirty": false,
+    "repository": "https://github.com/counterbranch/counterbranch",
+    "tree": "f73532e9b0c18481a2dc14142a86d546a83c82ee"
+  },
+  "discovery_source": {
+    "commit": "d0d5dfe44b58ebcc1db21585e18be6edccb2d6ac",
+    "dirty": false,
+    "repository": "https://github.com/counterbranch/discovery",
+    "tree": "78338e69c84dd3d8265682cd4b3bbdfbf69a9cc4"
+  },
   "edition": "scanner-only",
   "format": 2,
-  "status": "publisher-approval-pending"
+  "kits": {
+    "x86_64-unknown-linux-gnu": {
+      "bundle": {
+        "name": "counterbranch-scanner-only-alpha-x86_64-unknown-linux-gnu.tar.gz.sigstore.json",
+        "sha256": "15fd3ebdd920ff695eebf52a424f2d29c5b619dddc5ff8009698464edd287bc1",
+        "size": 10775
+      },
+      "edition": "scanner-only",
+      "name": "counterbranch-scanner-only-alpha-x86_64-unknown-linux-gnu.tar.gz",
+      "sha256": "7b070d9d8df04eb5dd19e2af6089142f0c2c1d996edba5c740f192423ed49267",
+      "size": 9757266
+    }
+  },
+  "repository": "counterbranch/alpha-releases",
+  "status": "approved",
+  "tag": "v0.41.3",
+  "version": "0.41.3"
 }

@@ -51,8 +51,12 @@ runs:
       shell: bash
       env:
         COUNTERBRANCH_ACTION_SIGNUP_TOKEN: ${{ inputs.signup-token }}
-        COUNTERBRANCH_ACTION_ACCESS_MODE: gated
-      run: python3 "$GITHUB_ACTION_PATH/run.py" --preflight "$GITHUB_ACTION_PATH/release-manifest.json"
+        COUNTERBRANCH_ACTION_ACCESS_MODE: open
+      run: |
+        set -euo pipefail
+        python3 "$GITHUB_ACTION_PATH/run.py" --preflight "$GITHUB_ACTION_PATH/release-manifest.json"
+        python3 "$GITHUB_ACTION_PATH/acquire.py" --preflight \
+          --manifest "$GITHUB_ACTION_PATH/release-manifest.json"
     - id: cosign
       uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       with:
@@ -86,7 +90,7 @@ runs:
         COUNTERBRANCH_ACTION_PROFILE: ${{ inputs.profile }}
         COUNTERBRANCH_ACTION_TIMEOUT_SECONDS: ${{ inputs.timeout-seconds }}
         COUNTERBRANCH_ACTION_SIGNUP_TOKEN: ${{ inputs.signup-token }}
-        COUNTERBRANCH_ACTION_ACCESS_MODE: gated
+        COUNTERBRANCH_ACTION_ACCESS_MODE: open
       run: python3 "$GITHUB_ACTION_PATH/run.py"
     - id: failure
       if: failure()
