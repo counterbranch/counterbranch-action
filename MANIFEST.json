@@ -1,8 +1,10 @@
 {
   "build": {
-    "exporter_sha256": "9d49601b945735239b3b24538625f3af8383682b7e2990f94cb1dc3c0f164f7c",
-    "source_date_epoch": 1790565394
+    "access_mode": "open",
+    "exporter_sha256": "eb0121ee8624a88d77fd2bb5d519185cb5f881671fdee0f440ec3ebb97d72a3b",
+    "source_date_epoch": 1790893095
   },
+  "edition": "scanner-only",
   "files": {
     "LICENSE": {
       "mode": "0644",
@@ -11,94 +13,73 @@
     },
     "README.md": {
       "mode": "0644",
-      "sha256": "754f288ce2cba35d325434b6a8794b5fdacf05a1d1ab76a00a0e4875c8e7ae8f",
-      "size": 6802
+      "sha256": "debb52fcf72244f2fa0f9066977dea5c40cb7faa54a40f67c71f9439f7e226c8",
+      "size": 3650
     },
     "acquire.py": {
       "mode": "0755",
-      "sha256": "f1bb36e3a01be820a5c77750811877d3916683dafafc9e165a456896ea9e003b",
-      "size": 12934
+      "sha256": "225fcb849036a87fd313262db7c7f04ccb5cd5b3a31bd280f6b6dab35218c258",
+      "size": 19392
     },
     "action.yml": {
       "mode": "0644",
-      "sha256": "15ae232cccecf3664c3c610e1eb0eeba165dd154a68814742063b74185d8cb91",
-      "size": 8550
-    },
-    "common.py": {
-      "mode": "0755",
-      "sha256": "9b636c5438aeff195c81e837994a8919b8002d171ff93bb56ba8016ce5e7e952",
-      "size": 4536
-    },
-    "install.py": {
-      "mode": "0755",
-      "sha256": "62ece71b3512726e69e60d33a399ea546f9bf1e6f7892641af902b8b21cc2e1f",
-      "size": 10975
-    },
-    "kit.py": {
-      "mode": "0755",
-      "sha256": "21c067acea4c940a19a55852aa8d10500016198d506baa02a28418d249818cfb",
-      "size": 3226
-    },
-    "prepare_opa.py": {
-      "mode": "0755",
-      "sha256": "f83b3f59e3f50d2a54bc4b4be39c955f7f1b9d1f3743c38113408df2b23ab2e4",
-      "size": 7680
+      "sha256": "d616006f1fc6f9476d29fb5efe422f50f4106bc019207efc0daed326ea746a21",
+      "size": 4503
     },
     "release-manifest.json": {
       "mode": "0644",
-      "sha256": "3448fe3b240eed8f41565baf79c6f8ae3318a8060ba70e06423881e0f8f224c7",
-      "size": 1300
+      "sha256": "cd24aa3658ceb04fe309cefa396a111fd286cd8d933ef85b28c7b64a13dcedb8",
+      "size": 1124
     },
     "run.py": {
       "mode": "0755",
-      "sha256": "f425fe9933cb06d157ab57b33036b5c22b246dd680e28d8d41703481cdaf7c6c",
-      "size": 29640
+      "sha256": "bf9f9de5209faf2f0e07075fb9981b5eb7def0c674ac296ec79680bffdb6f219",
+      "size": 12233
+    },
+    "scanner_kit.py": {
+      "mode": "0755",
+      "sha256": "a54f176ac74b41bd990322bf481e311bd1462e2fa5cf68bcc1245200f49a0367",
+      "size": 26182
     }
   },
-  "format": 1,
-  "name": "counterbranch-action",
+  "format": 2,
+  "name": "counterbranch-scanner-action",
   "release": {
-    "binary_source": {
-      "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
-      "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
+    "core_source": {
+      "commit": "b1d165dfe6fbd07e970949678f0503d1f5082d53",
+      "dirty": false,
+      "repository": "https://github.com/counterbranch/counterbranch",
+      "tree": "f73532e9b0c18481a2dc14142a86d546a83c82ee"
     },
-    "format": 1,
+    "discovery_source": {
+      "commit": "d0d5dfe44b58ebcc1db21585e18be6edccb2d6ac",
+      "dirty": false,
+      "repository": "https://github.com/counterbranch/discovery",
+      "tree": "78338e69c84dd3d8265682cd4b3bbdfbf69a9cc4"
+    },
+    "edition": "scanner-only",
+    "format": 2,
     "kits": {
-      "aarch64-apple-darwin": {
-        "bundle": {
-          "name": "counterbranch-alpha-aarch64-apple-darwin.tar.gz.sigstore.json",
-          "sha256": "4ffc81498dc1159a3222cd0891bd91a220ec71694ebe2dc66c061607ed47f328",
-          "size": 10643
-        },
-        "name": "counterbranch-alpha-aarch64-apple-darwin.tar.gz",
-        "sha256": "2b30086dafb664a687d623f690dd292d4ada5da23bd7b9f1af8945e2253cb5fa",
-        "size": 14913210
-      },
       "x86_64-unknown-linux-gnu": {
         "bundle": {
-          "name": "counterbranch-alpha-x86_64-unknown-linux-gnu.tar.gz.sigstore.json",
-          "sha256": "ce9f5541005f76b959e973f4f8fc7bef662d8b5e914f9c5823f88022ab911e83",
-          "size": 10463
+          "name": "counterbranch-scanner-only-alpha-x86_64-unknown-linux-gnu.tar.gz.sigstore.json",
+          "sha256": "15fd3ebdd920ff695eebf52a424f2d29c5b619dddc5ff8009698464edd287bc1",
+          "size": 10775
         },
-        "name": "counterbranch-alpha-x86_64-unknown-linux-gnu.tar.gz",
-        "sha256": "86844c46e0d3ffa4d9a097295d9199bbeb08e04a68971e90bdcff2ec19845ed6",
-        "size": 16350789
+        "edition": "scanner-only",
+        "name": "counterbranch-scanner-only-alpha-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "7b070d9d8df04eb5dd19e2af6089142f0c2c1d996edba5c740f192423ed49267",
+        "size": 9757266
       }
     },
-    "repository": "counterbranch/releases",
+    "repository": "counterbranch/alpha-releases",
     "status": "approved",
-    "tag": "v0.24.0",
-    "version": "0.24.0",
-    "wrapper_source": {
-      "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
-      "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
-    }
+    "tag": "v0.41.3",
+    "version": "0.41.3"
   },
   "source": {
     "distribution_clean": true,
-    "distribution_status_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    "export_inputs_sha256": "85d078ee6b8747952ed4a73436b74e30ccb21068fc842ced2f8f79d68f2bd394",
-    "git_commit": "5c7df1f46217cd5dd200c67946e38b464674428f",
-    "git_tree": "9ed5921dc2592fd5b9e273ec3a14962a34505acd"
+    "git_commit": "8095625383ea69064d961708d093f8ac3f131045",
+    "git_tree": "e48782ed9ce7382fd96eea27011a90abcb2fbd49"
   }
 }
