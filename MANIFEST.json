@@ -1,8 +1,8 @@
 {
   "build": {
     "access_mode": "open",
-    "exporter_sha256": "eb0121ee8624a88d77fd2bb5d519185cb5f881671fdee0f440ec3ebb97d72a3b",
-    "source_date_epoch": 1790893095
+    "exporter_sha256": "1829e72d4c67fc1f66f9be8cecb7b0f7bc1cc532a581832cbe10fd10b53fef01",
+    "source_date_epoch": 1790962297
   },
   "edition": "scanner-only",
   "files": {
@@ -13,8 +13,13 @@
     },
     "README.md": {
       "mode": "0644",
-      "sha256": "debb52fcf72244f2fa0f9066977dea5c40cb7faa54a40f67c71f9439f7e226c8",
-      "size": 3650
+      "sha256": "98adb2c078ba703e52138e0601e88b0cfff96a39020994da446a3b7fe936aeed",
+      "size": 7335
+    },
+    "REPORT-GUIDE.md": {
+      "mode": "0644",
+      "sha256": "e04177f1b53a508c73ced8ee70acbcb7557d469b7ec486d797d36efb6e2b1e7d",
+      "size": 4030
     },
     "acquire.py": {
       "mode": "0755",
@@ -23,13 +28,23 @@
     },
     "action.yml": {
       "mode": "0644",
-      "sha256": "d616006f1fc6f9476d29fb5efe422f50f4106bc019207efc0daed326ea746a21",
-      "size": 4503
+      "sha256": "b82469609ac5d7bf61f8d2164af3969fc45c7c6673556a0b28eec9718978e9d4",
+      "size": 9869
+    },
+    "comment.py": {
+      "mode": "0755",
+      "sha256": "6289ebdec74fbd815fe0b57241ef6e9015348c91d48c1b48afb7d93b52f4e15d",
+      "size": 52765
     },
     "release-manifest.json": {
       "mode": "0644",
       "sha256": "cd24aa3658ceb04fe309cefa396a111fd286cd8d933ef85b28c7b64a13dcedb8",
       "size": 1124
+    },
+    "report_bundle.py": {
+      "mode": "0755",
+      "sha256": "f519a31b6d58379dff9bb54d7603d2448c3bb94c905fab4b831bd45d9b613317",
+      "size": 13729
     },
     "run.py": {
       "mode": "0755",
@@ -79,7 +94,7 @@
   },
   "source": {
     "distribution_clean": true,
-    "git_commit": "8095625383ea69064d961708d093f8ac3f131045",
-    "git_tree": "e48782ed9ce7382fd96eea27011a90abcb2fbd49"
+    "git_commit": "f0fedc6adc72f618805f2a669e098af85ceac2ee",
+    "git_tree": "eb0f3399aba565dc991286a6e4e739c06fec4d89"
   }
 }
