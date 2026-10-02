@@ -2,7 +2,7 @@
   "build": {
     "access_mode": "open",
     "exporter_sha256": "1829e72d4c67fc1f66f9be8cecb7b0f7bc1cc532a581832cbe10fd10b53fef01",
-    "source_date_epoch": 1790955042
+    "source_date_epoch": 1790962297
   },
   "edition": "scanner-only",
   "files": {
@@ -33,8 +33,8 @@
     },
     "comment.py": {
       "mode": "0755",
-      "sha256": "3cde63ff6f1032b56889fadff414f9dac070cd2f10d1860ef4a4a2eb8bd790d7",
-      "size": 51107
+      "sha256": "6289ebdec74fbd815fe0b57241ef6e9015348c91d48c1b48afb7d93b52f4e15d",
+      "size": 52765
     },
     "release-manifest.json": {
       "mode": "0644",
@@ -94,7 +94,7 @@
   },
   "source": {
     "distribution_clean": true,
-    "git_commit": "81bf5c9136229f4b6dd045ac32cfa1d286e00d3c",
-    "git_tree": "498bc9577619cc61fe941153cd76826bb7f87128"
+    "git_commit": "f0fedc6adc72f618805f2a669e098af85ceac2ee",
+    "git_tree": "eb0f3399aba565dc991286a6e4e739c06fec4d89"
   }
 }

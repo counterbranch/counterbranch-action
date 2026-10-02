@@ -581,6 +581,27 @@ def render_operation(repository: str, base_revision: str, head_revision: str,
     return "\n".join(lines)
 
 
+def operation_plain_meaning(report: dict[str, Any]) -> str:
+    summary = report["summary"]
+    counts = (f"Modelled operation changes: {summary['added']} added, "
+              f"{summary['changed']} changed, {summary['removed']} removed.")
+    owner_action = ("Confirm that the reported edits match the intended authorization policy, then "
+                    "inspect the relevant guard or role definitions and their wiring before merge. "
+                    "Guard names alone do not establish whether runtime access broadened or narrowed.")
+    if (summary["added"] != 0 or summary["changed"] != 1 or summary["removed"] != 0
+            or len(report["changed"]) != 1):
+        return f"{counts} {owner_action}"
+    change = require_object(report["changed"][0], "report.changed item")
+    before = guard_details(change.get("base"), "report.changed item base")
+    after = guard_details(change.get("candidate"), "report.changed item candidate")
+    if (before is None or after is None or before[1] != after[1] or before[2] != after[2]
+            or not guard_only_change(change, before, after)):
+        return f"{counts} {owner_action}"
+    return (f"{counts} For the single changed modelled operation **{md(before[0])}**, retained "
+            f"static guard evidence changed from **{md(before[3])}** to **{md(after[3])}**. "
+            f"{owner_action}")
+
+
 def operation_reference(repository: str, revision: str, operation: dict[str, Any], label: str) -> str:
     location = operation.get("handler")
     if not isinstance(location, dict):
@@ -717,13 +738,11 @@ def render_comment(repository: str, number: int, report: dict[str, Any] | None,
         "## Counterbranch static comparison",
         "",
         f"Outcome: **{outcome}**" + (" · incomplete evidence retained" if incomplete else ""),
-        "",
-        "### Findings",
-        "",
     ]
+    finding_lines = ["### Findings", ""]
     unmodelled_details = None
     if report is None:
-        lines.append("No validated comparison report was available. The workflow failed during setup, acquisition, scanning, or validation.")
+        finding_lines.append("No validated comparison report was available. The workflow failed during setup, acquisition, scanning, or validation.")
     else:
         base_revision = report["base"]["revision"]
         head_revision = report["candidate"]["revision"]
@@ -808,18 +827,20 @@ def render_comment(repository: str, number: int, report: dict[str, Any] | None,
                 findings.append(f"The report records {total} retained static change(s), but their bounded detail rows are omitted; inspect the report ZIP.")
             else:
                 findings.append("No retained operation, candidate-evidence, or known externalized-authorization changes were found.")
-        lines.append("\n\n".join(findings))
+        finding_lines.append("\n\n".join(findings))
         if total > shown:
-            lines.extend(["", f"{total - shown} additional bounded finding(s) are available in the workflow report."])
+            finding_lines.extend(["", f"{total - shown} additional bounded finding(s) are available in the workflow report."])
     lines.extend(["", "### Plain meaning", ""])
     if report is None:
-        lines.append("The scanner could not establish a comparison result. Treat this as requiring investigation; it is not a clean result.")
+        lines.append("The scanner could not establish a comparison result. Open the run, identify and "
+                     "correct the first failed stage, and obtain a validated comparison before relying "
+                     "on this result. It is not a clean result.")
     elif incomplete:
         lines.append("The static comparison retained incomplete evidence. Resolve or assess the gaps before relying on the result.")
     elif outcome == "CLEAN":
         lines.append("The supported static comparison found no review-triggering retained change. This does not establish runtime enforcement.")
     elif report["summary"]["changed"] or report["summary"]["added"] or report["summary"]["removed"]:
-        lines.append("Supported static authorization evidence changed. An owner should inspect the exact commit-bound findings before merge.")
+        lines.append(operation_plain_meaning(report))
     elif (sum(report["candidate_evidence"]["summary"].values())
           or report["candidate_evidence"]["status"] == "unknown"
           or sum(report["externalized_authorization"]["summary"].values())
@@ -827,7 +848,9 @@ def render_comment(repository: str, number: int, report: dict[str, Any] | None,
           or report.get("unmodelled_changes")):
         lines.append("Static candidate, unmodelled, or externalized-authorization evidence needs review. An owner should inspect the exact commit-bound findings before merge.")
     else:
-        lines.append("No supported operation delta was retained, but the report still contains uncertainty that requires owner review.")
+        lines.append("No modelled operation change was retained. Review the remaining findings and "
+                     "limitations, and confirm the reported evidence matches the intended authorization policy.")
+    lines.append("Successful Action execution alone does not establish a clean assessment or merge approval.")
     limitation = unmodelled_limit_summary(unmodelled_details)
     if limitation is not None:
         lines.append(f"Unmodelled coverage remains bounded: {limitation}. Empty retained path rows do not establish that every changed file was modelled.")
@@ -842,6 +865,7 @@ def render_comment(repository: str, number: int, report: dict[str, Any] | None,
         lines.append(f"- [Download the report ZIP]({artifact_url}) and load it into your coding agent for further exploration. Available for one day. Start with `REPORT-GUIDE.md`, which contains a copyable prompt.")
     else:
         lines.append("- Report bundle upload was unavailable. Inspect the workflow steps before looking for a downloadable ZIP.")
+    lines.extend(["", *finding_lines])
     body = "\n".join(lines).rstrip() + "\n"
     if len(body.encode("utf-8")) > MAX_COMMENT_BYTES:
         raise CommentError("rendered comment exceeds the size limit")
