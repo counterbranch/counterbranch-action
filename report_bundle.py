@@ -159,7 +159,8 @@ def write_new_file(directory: Path, name: str, data: bytes) -> None:
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
-    descriptor = os.open(directory / name, flags, 0o600)
+    path = directory / name
+    descriptor = os.open(path, flags, 0o600)
     try:
         view = memoryview(data)
         while view:
@@ -167,8 +168,24 @@ def write_new_file(directory: Path, name: str, data: bytes) -> None:
             if written <= 0:
                 raise BundleError(f"could not write {name}")
             view = view[written:]
-    finally:
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except BaseException:
+            pass
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        raise
+    try:
         os.close(descriptor)
+    except BaseException:
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        raise
 
 
 def create_bundle(*, report: Path | None, markdown: Path, run_directory: Path,
@@ -225,7 +242,7 @@ def create_bundle(*, report: Path | None, markdown: Path, run_directory: Path,
         guide_path = Path(__file__).with_name("REPORT-GUIDE.md")
         if not guide_path.is_file():
             guide_path = Path(__file__).with_name("scanner_REPORT_GUIDE.md")
-    guide_data = read_regular(guide_path.resolve(), MAX_GUIDE, "report guide")
+    guide_data = read_regular(guide_path.absolute(), MAX_GUIDE, "report guide")
     try:
         guide_data.decode("utf-8")
     except UnicodeError as error:
